@@ -1,10 +1,14 @@
 import Image from "next/image";
 import { Inter } from "next/font/google";
-import React from "react";
+import React, { useCallback } from "react";
 import { BiHash, BiHomeCircle, BiMoney, BiUser } from "react-icons/bi";
 import { BsBell, BsBookmark, BsEnvelope, BsTwitter } from "react-icons/bs";
 import { SlOptions } from "react-icons/sl";
 import FeedCard from "@/components/FeedCard";
+import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
+import toast from "react-hot-toast";
+import { verifyUserGoogleTokenQuery } from "@/graphql/query/user";
+import { graphqlClient } from "@/clients/api";
 //SocialBite
 
 // Hype Connect 
@@ -12,7 +16,7 @@ import FeedCard from "@/components/FeedCard";
 interface TwitterSidebarButton {
   title: string;
   icon: React.ReactNode;
-  link : string
+  link: string
 }
 const sidebarMenuItems: TwitterSidebarButton[] = [
   {
@@ -59,6 +63,25 @@ const sidebarMenuItems: TwitterSidebarButton[] = [
   },
 ];
 export default function Home() {
+  const handleLoginWithGoogle = useCallback(
+    async (cred: CredentialResponse) => {
+      const googleToken = cred.credential;
+      if (!googleToken) return toast.error(`Google token not found`);
+
+      const { verifyGoogleToken } = await graphqlClient.request(verifyUserGoogleTokenQuery,
+        { token: googleToken })
+      // const { verifyGoogleToken } = await graphqlClient.request(
+      //   verifyUserGoogleTokenQuery,
+      //   { token: googleToken }
+      // )
+      toast.success("Verified Success");
+      console.log(verifyGoogleToken);
+      if (verifyGoogleToken) {
+        window.localStorage.setItem('__socialBite_token', verifyGoogleToken)
+      }
+    }, []
+  );
+
   return (
     <div>
       <div className="grid grid-cols-12 h-screen w-screen px-56">
@@ -69,8 +92,8 @@ export default function Home() {
           <div className="mt-1 text-xl pr-4">
             <ul>
               {sidebarMenuItems.map((item) => (
-                <li  className="flex justify-start items-center gap-4 hover:bg-gray-800 rounded-full px-3 py-3 w-fit cursor-pointer mt-2"
-                key={item.title}>
+                <li className="flex justify-start items-center gap-4 hover:bg-gray-800 rounded-full px-3 py-3 w-fit cursor-pointer mt-2"
+                  key={item.title}>
                   {/* <Link
                       className="flex justify-start items-center gap-4 hover:bg-gray-800 rounded-full px-3 py-3 w-fit cursor-pointer mt-2"
                       href={item.link}
@@ -82,13 +105,13 @@ export default function Home() {
               ))}
             </ul>
             <div className="mt-5 px-3">
-                <button className="hidden sm:block bg-[#1d9bf0] font-semibold text-lg py-2 px-4 rounded-full w-full">
-                  Tweet
-                </button>
-                <button className="block sm:hidden bg-[#1d9bf0] font-semibold text-lg py-2 px-4 rounded-full w-full">
-                  <BsTwitter />
-                </button>
-              </div>
+              <button className="hidden sm:block bg-[#1d9bf0] font-semibold text-lg py-2 px-4 rounded-full w-full">
+                Tweet
+              </button>
+              <button className="block sm:hidden bg-[#1d9bf0] font-semibold text-lg py-2 px-4 rounded-full w-full">
+                <BsTwitter />
+              </button>
+            </div>
           </div>
         </div>
         <div className="col-span-5  border-r-[1px] border-l-[1px] h-screen overflow-scroll border-gray-600">
@@ -99,7 +122,15 @@ export default function Home() {
           <FeedCard />
           <FeedCard />
         </div>
-        <div className="col-span-3"></div>
+
+        {/* <GoogleLogin onSuccess={cred => console.log(cred)} /> */}
+        <div className="col-span-3 p-5">
+          <div className="p-5 bg-slate-700 rounded-lg">
+            <h1 className="Text-2xl my-2">New to Twitter?</h1>
+            <GoogleLogin onSuccess={handleLoginWithGoogle} />
+            {/* <GoogleLogin onSuccess={(cred) => console.log(cred)} /> */}
+          </div>
+        </div>
       </div>
     </div>
   );
