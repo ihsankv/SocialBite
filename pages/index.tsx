@@ -9,6 +9,8 @@ import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import toast from "react-hot-toast";
 import { verifyUserGoogleTokenQuery } from "@/graphql/query/user";
 import { graphqlClient } from "@/clients/api";
+import { useCurrentUser } from "@/hooks/user";
+import { useQueryClient } from "@tanstack/react-query";
 //SocialBite
 
 // Hype Connect 
@@ -63,6 +65,11 @@ const sidebarMenuItems: TwitterSidebarButton[] = [
   },
 ];
 export default function Home() {
+
+  const { user } = useCurrentUser();
+  const queryClient = useQueryClient()
+  console.log("user", user)
+
   const handleLoginWithGoogle = useCallback(
     async (cred: CredentialResponse) => {
       const googleToken = cred.credential;
@@ -76,17 +83,20 @@ export default function Home() {
       // )
       toast.success("Verified Success");
       console.log(verifyGoogleToken);
-      if (verifyGoogleToken) {
-        window.localStorage.setItem('__socialBite_token', verifyGoogleToken)
-      }
-    }, []
+      if (verifyGoogleToken) 
+        window.localStorage.setItem('__socialBite_token', verifyGoogleToken);
+      // await queryClient.invalidateQueries(['curent-user'])
+      await queryClient.invalidateQueries({queryKey: ['curent-user']});
+      // await queryClient.invalidateQueries({ predicate: ['curent-user'] });
+
+    }, [queryClient]
   );
 
   return (
     <div>
       <div className="grid grid-cols-12 h-screen w-screen px-56">
         <div className="col-span-3 pt-1 ml-28">
-          <div className="text-2xl h-fit w-fit hover:bg-gray-800 rounded-full p-4 cursor-pointer transition-all">
+          <div className="text-2xl h-fit w-fit hover:bg-gray-800 rounded-full p-4 cursor-pointer transition-all relative">
             <BsTwitter />
           </div>
           <div className="mt-1 text-xl pr-4">
@@ -113,6 +123,24 @@ export default function Home() {
               </button>
             </div>
           </div>
+          {user && (
+            <div className="absolute bottom-5 flex gap-2 items-center bg-slate-800 px-3 py-2 rounded-full">
+              {user && user.profileImageURL && (
+                <Image
+                  className="rounded-full"
+                  src={user?.profileImageURL}
+                  alt="user-image"
+                  height={50}
+                  width={50}
+                />
+              )}
+              <div className="hidden sm:block">
+                <h3 className="text-xl">
+                  {user.firstName} {user.lastName}
+                </h3>
+              </div>
+            </div>
+          )}
         </div>
         <div className="col-span-5  border-r-[1px] border-l-[1px] h-screen overflow-scroll border-gray-600">
           <FeedCard />
@@ -125,11 +153,11 @@ export default function Home() {
 
         {/* <GoogleLogin onSuccess={cred => console.log(cred)} /> */}
         <div className="col-span-3 p-5">
-          <div className="p-5 bg-slate-700 rounded-lg">
+          {!user && <div className="p-5 bg-slate-700 rounded-lg">
             <h1 className="Text-2xl my-2">New to Twitter?</h1>
             <GoogleLogin onSuccess={handleLoginWithGoogle} />
             {/* <GoogleLogin onSuccess={(cred) => console.log(cred)} /> */}
-          </div>
+          </div>}
         </div>
       </div>
     </div>
