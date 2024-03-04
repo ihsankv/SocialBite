@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Inter } from "next/font/google";
-import React, { useCallback } from "react";
-import { BiHash, BiHomeCircle, BiMoney, BiUser } from "react-icons/bi";
+import React, { useCallback, useState } from "react";
+import { BiHash, BiHomeCircle, BiImageAlt, BiMoney, BiUser } from "react-icons/bi";
 import { BsBell, BsBookmark, BsEnvelope, BsTwitter } from "react-icons/bs";
 import { SlOptions } from "react-icons/sl";
 import FeedCard from "@/components/FeedCard";
@@ -11,6 +11,8 @@ import { verifyUserGoogleTokenQuery } from "@/graphql/query/user";
 import { graphqlClient } from "@/clients/api";
 import { useCurrentUser } from "@/hooks/user";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCreateTweet, useGetAllTweets } from "@/hooks/tweet";
+import { Tweet } from "@/gql/graphql";
 //SocialBite
 
 // Hype Connect 
@@ -67,7 +69,11 @@ const sidebarMenuItems: TwitterSidebarButton[] = [
 export default function Home() {
 
   const { user } = useCurrentUser();
+  const { tweets = [] } = useGetAllTweets();
+
   const queryClient = useQueryClient()
+  const [content, setContent] = useState('')
+  const { mutate } = useCreateTweet()
   console.log("user", user)
 
   const handleLoginWithGoogle = useCallback(
@@ -83,14 +89,43 @@ export default function Home() {
       // )
       toast.success("Verified Success");
       console.log(verifyGoogleToken);
-      if (verifyGoogleToken) 
+      if (verifyGoogleToken)
         window.localStorage.setItem('__socialBite_token', verifyGoogleToken);
       // await queryClient.invalidateQueries(['curent-user'])
-      await queryClient.invalidateQueries({queryKey: ['curent-user']});
+      await queryClient.invalidateQueries({ queryKey: ['curent-user'] });
       // await queryClient.invalidateQueries({ predicate: ['curent-user'] });
 
     }, [queryClient]
   );
+
+  const handleSelectImage = useCallback(() => {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "image/*");
+
+    // const handlerFn = handleInputChangeFile(input);
+
+    // input.addEventListener("change", handlerFn);
+
+    input.click();
+  }, []);
+  // }, [handleInputChangeFile]);
+
+  const handleCreateTweet = useCallback(() => {
+    mutate({
+      content,
+
+    })
+  }, [content, mutate])
+  // const handleCreateTweet = useCallback(async () => {
+  //   await mutateAsync({
+  //     content,
+  //     imageURL,
+  //   });
+  //   setContent("");
+  //   setImageURL("");
+  // }, [mutateAsync, content, imageURL]);
+
 
   return (
     <div>
@@ -142,13 +177,63 @@ export default function Home() {
             </div>
           )}
         </div>
+
         <div className="col-span-5  border-r-[1px] border-l-[1px] h-screen overflow-scroll border-gray-600">
+
+          <div>
+            <div className="border border-r-0 border-l-0 border-b-0 border-gray-600 p-5 hover:bg-slate-900 transition-all cursor-pointer">
+              <div className="grid grid-cols-12 gap-3">
+                <div className="col-span-1">
+                  {user?.profileImageURL && (
+                    <Image
+                      className="rounded-full"
+                      src={user?.profileImageURL}
+                      alt="user-image"
+                      height={50}
+                      width={50}
+                    />
+                  )}
+                </div>
+                <div className="col-span-11">
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="w-full bg-transparent text-xl px-3 border-b border-slate-700"
+                    placeholder="What's happening?"
+                    rows={3}
+                  ></textarea>
+                  {user && (
+                    // {imageURL && (
+                    <Image
+                      src={user?.profileImageURL}
+                      // src={imageURL}
+                      alt="tweet-image"
+                      width={50}
+                      height={50}
+                    />
+                  )}
+                  <div className="mt-2 flex justify-between items-center">
+                    <BiImageAlt
+                      onClick={handleSelectImage}
+                      className="text-xl" />
+                    <button
+                      onClick={handleCreateTweet}
+                      className="bg-[#1d9bf0] font-semibold text-sm py-2 px-4 rounded-full"
+                    >
+                      Tweet
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {tweets?.map((tweet) => tweet ? <FeedCard key={tweet?.id} data={tweet as Tweet} /> : null)}
+          {/* <FeedCard />
           <FeedCard />
           <FeedCard />
           <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
+          <FeedCard /> */}
         </div>
 
         {/* <GoogleLogin onSuccess={cred => console.log(cred)} /> */}
