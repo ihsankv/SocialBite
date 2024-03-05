@@ -13,6 +13,9 @@ import { useCurrentUser } from "@/hooks/user";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateTweet, useGetAllTweets } from "@/hooks/tweet";
 import { Tweet } from "@/gql/graphql";
+import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
+import { GetServerSideProps } from "next";
+import { getAllTweetsQuery } from "@/graphql/query/tweet";
 //SocialBite
 
 // Hype Connect 
@@ -66,10 +69,16 @@ const sidebarMenuItems: TwitterSidebarButton[] = [
     link: "/",
   },
 ];
-export default function Home() {
 
+interface HomeProps {
+  tweets?: Tweet[];
+}
+
+export default function Home(props:HomeProps) {
+
+  console.log("homeProps",props)
   const { user } = useCurrentUser();
-  const { tweets = [] } = useGetAllTweets();
+  // const { tweets = [] } = useGetAllTweets();
 
   const queryClient = useQueryClient()
   const [content, setContent] = useState('')
@@ -129,58 +138,8 @@ export default function Home() {
 
   return (
     <div>
-      <div className="grid grid-cols-12 h-screen w-screen px-56">
-        <div className="col-span-3 pt-1 ml-28">
-          <div className="text-2xl h-fit w-fit hover:bg-gray-800 rounded-full p-4 cursor-pointer transition-all relative">
-            <BsTwitter />
-          </div>
-          <div className="mt-1 text-xl pr-4">
-            <ul>
-              {sidebarMenuItems.map((item) => (
-                <li className="flex justify-start items-center gap-4 hover:bg-gray-800 rounded-full px-3 py-3 w-fit cursor-pointer mt-2"
-                  key={item.title}>
-                  {/* <Link
-                      className="flex justify-start items-center gap-4 hover:bg-gray-800 rounded-full px-3 py-3 w-fit cursor-pointer mt-2"
-                      href={item.link}
-                    > */}
-                  <span >{item.icon}</span>
-                  <span>{item.title}</span>
-                  {/* </Link> */}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-5 px-3">
-              <button className="hidden sm:block bg-[#1d9bf0] font-semibold text-lg py-2 px-4 rounded-full w-full">
-                Tweet
-              </button>
-              <button className="block sm:hidden bg-[#1d9bf0] font-semibold text-lg py-2 px-4 rounded-full w-full">
-                <BsTwitter />
-              </button>
-            </div>
-          </div>
-          {user && (
-            <div className="absolute bottom-5 flex gap-2 items-center bg-slate-800 px-3 py-2 rounded-full">
-              {user && user.profileImageURL && (
-                <Image
-                  className="rounded-full"
-                  src={user?.profileImageURL}
-                  alt="user-image"
-                  height={50}
-                  width={50}
-                />
-              )}
-              <div className="hidden sm:block">
-                <h3 className="text-xl">
-                  {user.firstName} {user.lastName}
-                </h3>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="col-span-5  border-r-[1px] border-l-[1px] h-screen overflow-scroll border-gray-600">
-
-          <div>
+    <Twitterlayout>
+    <div>
             <div className="border border-r-0 border-l-0 border-b-0 border-gray-600 p-5 hover:bg-slate-900 transition-all cursor-pointer">
               <div className="grid grid-cols-12 gap-3">
                 <div className="col-span-1">
@@ -228,23 +187,18 @@ export default function Home() {
             </div>
           </div>
 
-          {tweets?.map((tweet) => tweet ? <FeedCard key={tweet?.id} data={tweet as Tweet} /> : null)}
-          {/* <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard /> */}
-        </div>
-
-        {/* <GoogleLogin onSuccess={cred => console.log(cred)} /> */}
-        <div className="col-span-3 p-5">
-          {!user && <div className="p-5 bg-slate-700 rounded-lg">
-            <h1 className="Text-2xl my-2">New to Twitter?</h1>
-            <GoogleLogin onSuccess={handleLoginWithGoogle} />
-            {/* <GoogleLogin onSuccess={(cred) => console.log(cred)} /> */}
-          </div>}
-        </div>
-      </div>
+          {props?.tweets?.map((tweet) => tweet ? <FeedCard key={tweet?.id} data={tweet as Tweet} /> : null)}
+    </Twitterlayout>
     </div>
   );
 }
+export const getServerSideProps: GetServerSideProps<HomeProps> = async (
+  context
+) => {
+  const allTweets = await graphqlClient.request(getAllTweetsQuery);
+  return {
+    props: {
+      tweets: allTweets.getAllTweets as Tweet[],
+    },
+  };
+};
